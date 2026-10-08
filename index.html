@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#091b26" />
+  <meta name="description" content="Ibiza 3D: un explorador interactivo del relieve, edificios y lugares emblemáticos de Eivissa." />
+  <title>IBIZA 3D — Explore the island</title>
+  <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
+  <link href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    :root{color-scheme:dark;--bg:#061824;--panel:#081d2be8;--muted:#97aab7;--line:rgba(179,211,223,.16);--text:#f4f8fa;--accent:#52dbc8;--accent2:#d6b47b;--ink:#092b2d}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+    #map{position:absolute;inset:0;background:radial-gradient(ellipse at 55% 60%,#1a5260,#102d3b 60%,#091b27)}
+    #map .maplibregl-canvas{transition:filter .45s ease}body.is-night #map .maplibregl-canvas{filter:brightness(.57) saturate(.75) contrast(1.10)}
+    .maplibregl-control-container .maplibregl-ctrl-top-right{top:116px;right:22px}.maplibregl-ctrl-group{background:#112f3ce8!important;border:1px solid var(--line)!important;box-shadow:0 7px 30px #0003!important;border-radius:12px!important}.maplibregl-ctrl-group button{height:34px;width:34px}.maplibregl-ctrl-group button+button{border-top:1px solid var(--line)!important}.maplibregl-ctrl-group button span{filter:invert(1)}.maplibregl-ctrl-attrib{background:rgba(4,15,22,.75)!important;color:#d4e5ed!important}.maplibregl-ctrl-attrib a{color:#a2e7df!important}
+    .aside{position:absolute;z-index:10;top:0;bottom:0;left:0;width:367px;max-width:100%;background:linear-gradient(160deg,rgba(10,31,43,.97),rgba(7,23,35,.96));border-right:1px solid #ffffff22;box-shadow:16px 0 65px #03101c42;display:flex;flex-direction:column}
+    .aside:before{content:"";position:absolute;top:0;left:0;right:0;height:180px;background:radial-gradient(ellipse at 0 0,#156d6b67,transparent 75%);pointer-events:none}
+    .scroll{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#45606f transparent;flex:1;padding:26px 26px 22px;position:relative}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:31px}.brand-icon{width:41px;height:41px;border:1px solid #6ee9d580;border-radius:14px;display:grid;place-items:center;color:var(--accent);background:#1a626344}.brand-icon svg{width:24px;height:24px}.brand strong{display:block;letter-spacing:.145em;font-weight:750;font-size:14px}.brand small{display:block;color:#8fb1b9;font-size:10px;letter-spacing:.17em;margin-top:5px}.tag{margin-left:auto;border:1px solid #55d4c764;border-radius:30px;color:#9deee2;font-size:9px;font-weight:650;letter-spacing:.11em;padding:6px 8px}
+    .eyebrow{font-size:10px;font-weight:720;letter-spacing:.23em;color:var(--accent);margin:0 0 9px;text-transform:uppercase}
+    h1{font-size:48px;line-height:.99;letter-spacing:-.065em;font-weight:720;margin:0 0 17px}h1 em{font-weight:360;color:var(--accent);font-style:normal}
+    .lede{line-height:1.65;font-size:12.6px;color:#b6c6cc;max-width:290px;margin:0 0 23px}
+    .searchbox{display:flex;align-items:center;gap:10px;background:#ffffff0c;border:1px solid #ffffff27;border-radius:12px;padding:0 12px;height:45px;margin-bottom:23px}.searchbox svg{height:16px;width:16px;color:#a3bdc5}.searchbox input{background:none;border:none;min-width:0;flex:1;color:#fff;outline:none;font-size:12px}.searchbox input::placeholder{color:#7d929b}
+    .section-line{display:flex;justify-content:space-between;align-items:center;margin:24px 0 12px}.section-line h2{font-size:11px;letter-spacing:.13em;text-transform:uppercase;margin:0;font-weight:720;color:#dce9ed}.muted-label{color:#779ca5;font-size:10px}
+    .tabs{display:flex;gap:6px;margin-bottom:13px}.tab{border:1px solid #ffffff19;border-radius:9px;min-width:0;flex:1;padding:10px 3px;color:#8cabb6;background:#0c2731a6;font-size:11px;font-weight:650}.tab.active{color:#d6fff7;background:#197d7273;border-color:#46d5bd8a}
+    .places{display:grid;gap:7px}.place{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:#ffffff08;border:1px solid #ffffff13;border-radius:12px;color:#f4f9fa;padding:10px 12px;min-height:57px;transition:background .15s,border-color .15s}.place:hover,.place:focus-visible{background:#1d555a72;border-color:#3dcbb680}.place .number{font-size:10px;font-weight:700;color:#67e4d0;background:#3dd0bc21;border-radius:9px;min-width:31px;height:31px;display:grid;place-items:center}.place strong{display:block;font-size:12px;font-weight:650}.place small{display:block;font-size:10px;color:#9db0b9;margin-top:4px}.place .arrow{margin-left:auto;color:#74b6b3;font-size:20px;font-weight:300}
+    .toggle-list{border:1px solid var(--line);border-radius:13px;overflow:hidden}.toggle{min-height:44px;display:flex;align-items:center;gap:10px;justify-content:space-between;padding:0 13px;border-bottom:1px solid var(--line);font-size:11.5px}.toggle:last-child{border-bottom:0}.toggle .left{display:flex;align-items:center;gap:10px}.toggle .ic{width:17px;text-align:center;color:var(--accent);font-size:14px}
+    .switch{position:relative;display:block;width:32px;height:18px;flex:0 0 auto}.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0}.switch span{position:absolute;inset:0;background:#294151;border-radius:30px;border:1px solid #4b6c75;transition:all .2s}.switch span:before{content:"";position:absolute;height:12px;width:12px;top:2px;left:2px;background:#b7cad1;border-radius:50%;transition:transform .2s}.switch input:checked+span{background:#2eb6a0;border-color:#4ee1c9}.switch input:checked+span:before{transform:translateX(14px);background:#fff}.switch input:focus-visible+span{outline:2px solid #a8fff1;outline-offset:3px}
+    .selectrow{margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#b4c8cf;font-size:11px}.selectrow select{background:#0d313e;border:1px solid #476772;border-radius:8px;color:#deedf0;padding:8px 10px;font-size:11px;max-width:167px}
+    .aside-footer{padding:15px 26px 19px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px;color:#88a9b3}.dot{display:inline-block;width:7px;height:7px;background:#60dabc;border-radius:50%;box-shadow:0 0 8px #57d7af80;margin-right:7px}.footlink{color:#a0dddb;text-decoration:none}.footlink:hover{text-decoration:underline}
+    .topbar{position:absolute;z-index:3;top:21px;left:391px;right:22px;display:flex;align-items:flex-start;gap:12px;pointer-events:none}.topbar>*{pointer-events:auto}.glass{border:1px solid #ffffff38;background:rgba(9,33,44,.87);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);box-shadow:0 12px 39px #0616223b;border-radius:13px}.locator{display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:11px;color:#edf6f7;letter-spacing:.04em}.locator .pin{color:var(--accent);font-size:17px}.locator small{display:block;color:#9bb7c3;font-size:9px;margin-top:3px;letter-spacing:.06em}.top-spacer{flex:1}.weather{min-width:142px;padding:12px 15px;display:flex;align-items:center;gap:11px}.weather .symbol{font-size:25px}.weather strong{font-size:20px;letter-spacing:-.04em}.weather small{display:block;font-size:9px;color:#adc1c7;margin-top:2px}.weather.offline strong{font-size:11px;letter-spacing:0}
+    .controls{position:absolute;z-index:3;right:24px;bottom:63px;display:flex;flex-direction:column;gap:10px;align-items:flex-end}.ctrl{color:#ebf5f7;border:1px solid #ffffff38;padding:11px 13px;border-radius:11px;background:#0c2b37e8;backdrop-filter:blur(12px);font-size:11px;font-weight:620;box-shadow:0 6px 20px #0003}.ctrl:hover{border-color:var(--accent);color:#8bffeb}.ctrl.primary{background:#16887de8;color:white;border-color:#53dfcbd1}
+    .bottom-strip{position:absolute;z-index:3;left:391px;bottom:22px;max-width:calc(100% - 585px);padding:13px 16px;font-size:10px;display:flex;gap:14px;align-items:center;color:#afc3c8;line-height:1.2}.bottom-strip b{font-size:10px;color:#f4f8f9}.mini-line{width:1px;align-self:stretch;background:#ffffff35}
+    .toast{position:absolute;z-index:20;left:50%;bottom:32px;transform:translateX(-50%) translateY(30px);background:#0a303b;color:#e7fffb;padding:12px 17px;border:1px solid #62dccb78;border-radius:12px;box-shadow:0 10px 50px #001b27a3;max-width:min(440px,90vw);text-align:center;font-size:12px;opacity:0;pointer-events:none;transition:all .2s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .maplibregl-popup-content{background:#0b2c38;color:#e9f7f7;border:1px solid #61cfc473;border-radius:13px;min-width:208px;box-shadow:0 10px 45px #0007;padding:13px 15px}.maplibregl-popup-tip{border-top-color:#0b2c38!important}.maplibregl-popup-close-button{color:#fff;font-size:19px;padding:3px 7px}.popup-title{font-size:13px;font-weight:750;padding-right:13px}.popup-type{font-size:10px;color:#6ee6d3;text-transform:uppercase;letter-spacing:.12em;margin-top:6px}.popup-text{font-size:11px;color:#b3cbd2;line-height:1.5;margin-top:10px}.marker{display:grid;place-items:center;width:28px;height:28px;background:#092e3dde;border:1px solid #90ead9;border-radius:9px;box-shadow:0 0 0 4px #57d8be25,0 3px 15px #0715219c;cursor:pointer;transition:transform .2s}.marker:hover{transform:scale(1.2)}.marker span{font-size:13px}
+    #map-error{position:absolute;z-index:5;top:50%;left:calc(50% + 180px);transform:translate(-50%,-50%);max-width:360px;display:none;padding:20px;text-align:center;background:#082d3ce9;border-radius:14px;border:1px solid #5ee2cc60;box-shadow:0 16px 54px #061520aa}#map-error strong{display:block;font-size:15px;margin-bottom:6px}#map-error p{font-size:12px;color:#bed1d7;line-height:1.6}#map-error a{color:#66efda}
+    @media(max-width:780px){.aside{top:auto;height:47%;width:100%;border-right:0;border-top:1px solid #ffffff38;box-shadow:0 -10px 46px #051c2aab;border-radius:20px 20px 0 0}.scroll{padding:19px 21px 12px}.brand{margin-bottom:13px}.brand-icon{width:35px;height:35px;border-radius:11px}.brand small{display:none}.tag{font-size:8px}.eyebrow{margin-bottom:4px}h1{font-size:34px;margin-bottom:8px}.lede{font-size:11px;line-height:1.4;max-width:95%;margin-bottom:13px}.searchbox{height:39px;margin-bottom:12px}.section-line{margin:18px 0 10px}.topbar{top:13px;left:12px;right:12px;gap:6px}.locator{padding:10px 11px;font-size:10px}.weather{padding:8px 11px;min-width:113px}.weather strong{font-size:16px}.weather .symbol{font-size:19px}.controls{bottom:calc(47% + 13px);right:11px;gap:6px}.ctrl{padding:9px 10px;font-size:10px}.bottom-strip{display:none}.aside-footer{padding:10px 21px 12px}.maplibregl-control-container .maplibregl-ctrl-top-right{top:90px;right:10px}#map-error{left:50%;top:25%}.maplibregl-ctrl-bottom-right{display:none}}
+    @media(max-height:590px) and (min-width:781px){.scroll{padding-top:16px}.brand{margin-bottom:13px}h1{font-size:36px}.lede{margin-bottom:12px}.section-line{margin:16px 0 10px}.searchbox{margin-bottom:12px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div id="map" role="application" aria-label="Mapa interactivo tridimensional de Ibiza"></div>
+  <div id="map-error" role="alert"><strong>El mapa no se ha podido cargar</strong><p>Comprueba la conexión a Internet. Esta demo utiliza cartografía externa y necesita acceso a sus servidores.</p><a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">Ver estado de la cartografía ↗</a></div>
+  <aside class="aside" aria-label="Panel de exploración">
+    <div class="scroll">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17.4 8.6 7l4.1 5.2 3.1-3.6L21 17.4"/><path d="M2 20h20"/><circle cx="17.6" cy="4.4" r="1.7"/></svg></div>
+        <div><strong>IBIZA 3D</strong><small>THE ISLAND, REIMAGINED</small></div>
+        <span class="tag">BETA · DEMO</span>
+      </div>
+      <p class="eyebrow">38°54′ N · 1°26′ E</p>
+      <h1>Explora<br><em>otra Ibiza.</em></h1>
+      <p class="lede">Vuela sobre la isla. Descubre pueblos, calas y montañas con relieve real y edificios en 3D.</p>
+      <div class="searchbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+        <input type="search" id="search" placeholder="Buscar pueblo, playa o lugar..." autocomplete="off" aria-label="Buscar lugar" />
+        <span style="font-size:10px;color:#738f99">↵</span>
+      </div>
+      <div class="section-line"><h2>Descubrir la isla</h2><span class="muted-label" id="place-count">— lugares</span></div>
+      <div class="tabs" role="group" aria-label="Filtrar lugares"><button class="tab active" data-category="all">Todos</button><button class="tab" data-category="town">Pueblos</button><button class="tab" data-category="nature">Naturaleza</button></div>
+      <div class="places" id="places" aria-live="polite"></div>
+      <div class="section-line"><h2>Capas del mapa</h2><span class="muted-label">Personaliza tu vista</span></div>
+      <div class="toggle-list">
+        <label class="toggle"><span class="left"><span class="ic">▥</span> Edificios en 3D</span><span class="switch"><input id="buildings" type="checkbox" checked/><span></span></span></label>
+        <label class="toggle"><span class="left"><span class="ic">◭</span> Relieve de la isla</span><span class="switch"><input id="terrain" type="checkbox" checked/><span></span></span></label>
+        <label class="toggle"><span class="left"><span class="ic">⌖</span> Lugares destacados</span><span class="switch"><input id="markers" type="checkbox" checked/><span></span></span></label>
+        <label class="toggle"><span class="left"><span class="ic">☾</span> Modo noche (visual)</span><span class="switch"><input id="night" type="checkbox"/><span></span></span></label>
+      </div>
+      <div class="selectrow"><span>Estilo cartográfico</span><select id="style" aria-label="Estilo del mapa"><option value="bright">Natural · color</option><option value="liberty">Urbano · detallado</option><option value="positron">Minimal · claro</option></select></div>
+      <div style="font-size:10px;line-height:1.55;color:#789ca7;margin-top:15px">Los edificios usan geometrías de OpenStreetMap: las alturas pueden ser aproximadas o faltar en algunas zonas. El relieve proviene de un modelo digital abierto.</div>
+    </div>
+    <footer class="aside-footer"><span><span class="dot"></span><span id="status">Iniciando mapa</span></span><a class="footlink" href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer" target="_blank">Fuentes & créditos ↗</a></footer>
+  </aside>
+  <div class="topbar">
+    <div class="locator glass"><span class="pin">⌖</span><span><b id="current-place">Illes Balears · Ibiza</b><small id="camera-hint">Vista de toda la isla</small></span></div>
+    <div class="top-spacer"></div>
+    <div class="weather glass offline" id="weather" title="Tiempo actual de Eivissa según Open-Meteo"><span class="symbol" id="weather-symbol">☼</span><div><strong id="temp">— °C</strong><small id="weather-caption">Consultando tiempo...</small></div></div>
+  </div>
+  <div class="controls" role="group" aria-label="Cámara y vista">
+    <button class="ctrl" id="overview">↗ Toda la isla</button>
+    <button class="ctrl primary" id="dimension">◈ Vista 2D</button>
+  </div>
+  <div class="bottom-strip glass"><span><b>IBIZA / EIVISSA</b><br>Explorador geográfico 3D</span><span class="mini-line"></span><span><b id="zoomlabel">ZOOM —</b><br>WGS84 · WebGL</span><span class="mini-line"></span><span><b>OSM + datos abiertos</b><br>Sin cuenta ni claves de mapas</span></div>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module">
+    import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs';
+
+    // Coordinates are WGS84 [longitude, latitude]. Viewpoints are illustrative curated stops.
+    const POIS = [
+      {name:'Eivissa · Dalt Vila',sub:'Casco histórico y murallas',category:'town',coord:[1.43620,38.90697],zoom:16.15,bearing:-29,pitch:65,icon:'🏰',detail:'Sobrevuela las murallas y el centro histórico de la capital.'},
+      {name:'Santa Eulària des Riu',sub:'Pueblo, paseo y puerto',category:'town',coord:[1.53399,38.98410],zoom:15.25,bearing:12,pitch:61,icon:'⛵',detail:'Explora el núcleo urbano de Santa Eulària y su frente marítimo.'},
+      {name:'Sant Antoni de Portmany',sub:'Bahía y zona urbana',category:'town',coord:[1.30185,38.98008],zoom:15.2,bearing:-24,pitch:63,icon:'🌅',detail:'Observa la bahía de Sant Antoni y sus edificios en perspectiva.'},
+      {name:'Sant Josep de sa Talaia',sub:'Pueblo del suroeste',category:'town',coord:[1.29350,38.92120],zoom:15,bearing:25,pitch:63,icon:'🏘️',detail:'Recorre el pueblo y las colinas del suroeste de Ibiza.'},
+      {name:'Es Vedrà',sub:'Islote emblemático',category:'nature',coord:[1.2092,38.8676],zoom:13.4,bearing:-16,pitch:68,icon:'⛰️',detail:'Contempla el islote y la costa oeste con el relieve en 3D.'},
+      {name:'Cala Comte',sub:'Calas del oeste',category:'nature',coord:[1.2271,38.9587],zoom:14,bearing:-31,pitch:63,icon:'🏝️',detail:'Una vista sobre la costa recortada y las calas del oeste.'},
+      {name:'Ses Salines',sub:'Salinas y parque natural',category:'nature',coord:[1.3790,38.8429],zoom:13.25,bearing:35,pitch:65,icon:'🦩',detail:'Descubre las lagunas de sal y el paisaje del sur de Ibiza.'},
+      {name:'Sant Joan de Labritja',sub:'Interior del norte',category:'town',coord:[1.5130,39.0780],zoom:14.8,bearing:14,pitch:63,icon:'🌿',detail:'Mira la topografía del norte y uno de sus pueblos históricos.'},
+      {name:'Platja d’en Bossa',sub:'Litoral, playa y hoteles',category:'nature',coord:[1.4077,38.8855],zoom:15.1,bearing:-15,pitch:65,icon:'🏖️',detail:'Explora la franja urbana y la larga playa al sur de Eivissa.'},
+      {name:'Aeropuerto de Ibiza',sub:'Pistas y terminal',category:'town',coord:[1.3731,38.8730],zoom:14.45,bearing:-34,pitch:58,icon:'✈️',detail:'Vista del aeropuerto IBZ y su entorno. Los vuelos en directo no están integrados en esta demo.'}
+    ];
+    const DEFAULT_CAMERA={center:[1.430,38.951],zoom:10.6,pitch:63,bearing:-20};
+    const $=id=>document.getElementById(id);
+    const settings={buildings:true,terrain:true,markers:true,night:false,style:'bright',category:'all',search:''};
+    const toast=(message)=>{const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),3000)};
+    const map=new maplibregl.Map({
+      container:'map',style:'https://tiles.openfreemap.org/styles/bright',
+      ...DEFAULT_CAMERA, maxPitch:85,maxZoom:19,minZoom:8,
+      canvasContextAttributes:{antialias:true}, attributionControl:true,
+      locale:{'NavigationControl.ZoomIn':'Acercar','NavigationControl.ZoomOut':'Alejar','NavigationControl.ResetBearing':'Restablecer orientación'}
+    });
+    map.addControl(new maplibregl.NavigationControl({visualizePitch:true,showCompass:true}), 'top-right');
+    const markers=[];
+    POIS.forEach(p=>{
+      const el=document.createElement('button');el.className='marker';el.type='button';el.setAttribute('aria-label','Ir a '+p.name);el.title=p.name;
+      const icon=document.createElement('span');icon.textContent=p.icon;el.appendChild(icon);
+      const marker=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(p.coord).addTo(map);
+      el.addEventListener('click',()=>focusPlace(p)); markers.push(marker);
+    });
+    function attachLayers(){
+      try{
+        if(!map.getSource('ibiza-dem'))map.addSource('ibiza-dem',{
+          type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+          tileSize:256,maxzoom:15,encoding:'terrarium',
+          attribution:'Relieve: Mapzen / AWS Terrain Tiles (datos de origen sujetos a sus atribuciones)'
+        });
+        if(settings.terrain) map.setTerrain({source:'ibiza-dem',exaggeration:1.15});
+        else map.setTerrain(null);
+      }catch(e){console.warn('No se pudo cargar el relieve:',e);toast('El relieve no está disponible temporalmente');}
+      if(!map.getSource('ibiza-buildings')) map.addSource('ibiza-buildings',{type:'vector',url:'https://tiles.openfreemap.org/planet'});
+      // The bright base style does not add extruded 3D buildings itself.
+      if(!map.getLayer('ibiza-buildings-3d')){
+        const labels=map.getStyle().layers?.find(l=>l.type==='symbol' && l.layout?.['text-field']);
+        map.addLayer({id:'ibiza-buildings-3d',type:'fill-extrusion',source:'ibiza-buildings','source-layer':'building',
+          filter:['!=',['get','hide_3d'],true],minzoom:14,
+          layout:{visibility:settings.buildings?'visible':'none'},
+          paint:{
+            'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],8],0,'#d7c9ae',60,'#92bac0',180,'#448e9f'],
+            'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,15,['coalesce',['get','render_height'],8]],
+            'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+            'fill-extrusion-opacity':.87
+          }
+        },labels?.id);
+      }
+      // The liberty style contains its own extrusion; hide it to prevent duplicates.
+      if(settings.style==='liberty'){
+        for(const layer of map.getStyle().layers||[]){
+          if(layer.type==='fill-extrusion' && layer.id!=='ibiza-buildings-3d'){
+            map.setLayoutProperty(layer.id,'visibility','none');
+          }
+        }
+      }
+      updateLighting();
+    }
+    function updateLighting(){
+      document.body.classList.toggle('is-night',settings.night);
+      try{ map.setLight(settings.night ? {anchor:'map',color:'#87b5ec',intensity:.3,position:[1.2,205,20]} : {anchor:'map',color:'#ffffff',intensity:.5,position:[1.15,210,58]}); }catch(e){}
+    }
+    map.on('style.load',()=>{
+      try{attachLayers();$('status').textContent='Mapa conectado';}catch(e){console.error(e);$('status').textContent='Mapa parcial';toast('No se han podido cargar todas las capas');}
+    });
+    map.on('load',()=>{ $('status').textContent='Mapa conectado';$('map-error').style.display='none'; });
+    map.on('moveend',updateCamera);
+    function updateCamera(){ $('zoomlabel').textContent='ZOOM '+map.getZoom().toFixed(1); $('camera-hint').textContent=map.getZoom()>14?'Vista urbana 3D':map.getZoom()>11?'Vista de detalle':'Vista de toda la isla'; }
+    function focusPlace(p){
+      $('current-place').textContent=p.name;
+      map.flyTo({center:p.coord,zoom:p.zoom,pitch:p.pitch,bearing:p.bearing,duration:1850,essential:true});
+      setTimeout(()=>{new maplibregl.Popup({offset:17,closeOnMove:true,maxWidth:'275px'}).setLngLat(p.coord).setHTML(`<div class="popup-title">${p.name}</div><div class="popup-type">${p.category==='town'?'Lugar / municipio':'Naturaleza / costa'}</div><div class="popup-text">${p.detail}</div>`).addTo(map);},750);
+    }
+    function renderPlaces(){
+      const matches=POIS.filter(p=>(settings.category==='all'||p.category===settings.category)&&(p.name+' '+p.sub).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(settings.search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')));
+      const container=$('places');container.replaceChildren();$('place-count').textContent=matches.length+' lugares';
+      if(!matches.length){const p=document.createElement('p');p.textContent='No hay lugares que coincidan con la búsqueda.';p.style.cssText='font-size:11px;color:#9bb5bd';container.appendChild(p);return;}
+      matches.forEach((p,i)=>{const b=document.createElement('button');b.className='place';b.type='button';
+        const num=document.createElement('span');num.className='number';num.textContent=p.icon;
+        const labels=document.createElement('span');const title=document.createElement('strong');title.textContent=p.name;const sub=document.createElement('small');sub.textContent=p.sub;labels.append(title,sub);
+        const arrow=document.createElement('span');arrow.className='arrow';arrow.textContent='↗';b.append(num,labels,arrow);b.addEventListener('click',()=>focusPlace(p));container.appendChild(b);
+      });
+    }
+    $('search').addEventListener('input',e=>{settings.search=e.target.value;renderPlaces()});
+    $('search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=POIS.find(p=>(settings.category==='all'||p.category===settings.category)&&(p.name+' '+p.sub).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(settings.search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')));if(p)focusPlace(p)}});
+    document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{settings.category=btn.dataset.category;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===btn));renderPlaces()}));
+    $('buildings').addEventListener('change',e=>{settings.buildings=e.target.checked;if(map.getLayer('ibiza-buildings-3d'))map.setLayoutProperty('ibiza-buildings-3d','visibility',settings.buildings?'visible':'none');if(settings.buildings&&map.getZoom()<14)toast('Acércate a un pueblo para ver los edificios en 3D')});
+    $('terrain').addEventListener('change',e=>{settings.terrain=e.target.checked;if(map.getSource('ibiza-dem'))map.setTerrain(settings.terrain?{source:'ibiza-dem',exaggeration:1.15}:null)});
+    $('markers').addEventListener('change',e=>{settings.markers=e.target.checked;markers.forEach(m=>m.getElement().style.display=settings.markers?'':'none')});
+    $('night').addEventListener('change',e=>{settings.night=e.target.checked;updateLighting()});
+    $('style').addEventListener('change',e=>{settings.style=e.target.value;$('status').textContent='Cambiando estilo';map.setStyle('https://tiles.openfreemap.org/styles/'+settings.style)});
+    $('overview').addEventListener('click',()=>{$('current-place').textContent='Illes Balears · Ibiza';map.flyTo({...DEFAULT_CAMERA,duration:1900,essential:true});});
+    $('dimension').addEventListener('click',()=>{const currently3d=map.getPitch()>15;map.easeTo({pitch:currently3d?0:63,duration:750});$('dimension').textContent=currently3d?'◈ Vista 3D':'◈ Vista 2D'});
+    async function loadWeather(){
+      try{
+        const url='https://api.open-meteo.com/v1/forecast?latitude=38.907&longitude=1.433&current=temperature_2m,weather_code,wind_speed_10m&timezone=Europe%2FMadrid';
+        const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),9000);
+        let data;try{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw new Error('HTTP '+r.status);data=await r.json()}finally{clearTimeout(timer)}
+        const c=data.current;if(!c||!Number.isFinite(c.temperature_2m))throw new Error('Dato ausente');
+        const code=c.weather_code;
+        $('weather-symbol').textContent=[0,1].includes(code)?'☀️':[2,3].includes(code)?'⛅':code>=51&&code<=67?'🌧️':code>=71&&code<=86?'❄️':code>=95?'⛈️':'🌤️';
+        $('temp').textContent=Math.round(c.temperature_2m)+' °C';
+        $('weather-caption').textContent='Eivissa · ahora';$('weather').classList.remove('offline');
+        $('weather').title='Open-Meteo · hora de observación: '+(c.time||'no disponible')+' · viento '+(c.wind_speed_10m??'—')+' km/h';
+      }catch(e){$('temp').textContent='Sin datos';$('weather-caption').textContent='Meteo no disponible';$('weather-symbol').textContent='☁️';}
+    }
+    renderPlaces();updateCamera();loadWeather();
+    setTimeout(()=>{if(!$('map').querySelector('canvas')){$('map-error').style.display='block';$('status').textContent='Requiere conexión';}},9000);
+  </script>
+  <script>
+    // Runs even if the ES-module CDN import fails, making network errors visible.
+    setTimeout(() => {
+      if (!document.querySelector('#map canvas')) {
+        document.getElementById('map-error').style.display = 'block';
+        document.getElementById('status').textContent = 'Sin conexión cartográfica';
+      }
+    }, 12000);
+  </script>
+</body>
+</html>
